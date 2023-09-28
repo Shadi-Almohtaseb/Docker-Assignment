@@ -9,35 +9,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set image version (tag)
-        id: image_version
-        run: echo "gitsha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Login to Registry
-        uses: docker/login-action@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Docker_Hub
+        uses: docker/login-action@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build the Docker image
-        run: docker build . --file Dockerfile --tag ghcr.io/shadi-almohtaseb/docker-assignment:${{ steps.image_version.outputs.gitsha }}
-      - name: Publish the Docker image
-        run: docker push ghcr.io/shadi-almohtaseb/docker-assignment:${{ steps.image_version.outputs.gitsha }}
-      - name: configure docker host
-        uses: khaledez/configure-docker-host@v1
-        with:
-          host: 52.90.10.66
-          user: github
-          ssh_private_key: ${{ secrets.DEPLOYMENT_KEY }}
-      - name: Deploy to production
-        run: docker compose -f docker-compose.prod.yml up -d
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker-compose -f docker-compose-prod.yml build
+          docker-compose -f docker-compose-prod.yml push
         env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          GIT_VERSION: ${{ steps.image_version.outputs.gitsha }}
-      - name: print logs
-        if: always()
-        run: docker compose logs
+          DOCKER_CLI_ACI: "1"
